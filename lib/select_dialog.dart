@@ -1,5 +1,6 @@
 library select_dialog;
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'multiple_items_bloc.dart';
@@ -102,31 +103,41 @@ class SelectDialog<T> extends StatefulWidget {
       context: context,
       useRootNavigator: useRootNavigator,
       builder: (context) {
-        return AlertDialog(
+        return Dialog(
+          insetPadding: EdgeInsets.all(20),
           backgroundColor: backgroundColor,
-          title: Text(label ?? "", style: titleStyle),
-          content: SelectDialog<T>(
-            selectedValue: selectedValue,
-            multipleSelectedValues: multipleSelectedValues,
-            itemsList: items,
-            onChange: onChange,
-            onMultipleItemsChange: onMultipleItemsChange,
-            onFind: onFind,
-            showSearchBox: showSearchBox,
-            itemBuilder: itemBuilder,
-            searchBoxDecoration: searchBoxDecoration,
-            searchHint: searchHint,
-            titleStyle: titleStyle,
-            emptyBuilder: emptyBuilder,
-            okButtonBuilder: okButtonBuilder,
-            loadingBuilder: loadingBuilder,
-            errorBuilder: errorBuilder,
-            constraints: constraints,
-            autofocus: autofocus,
-            alwaysShowScrollBar: alwaysShowScrollBar,
-            searchBoxMaxLines: searchBoxMaxLines,
-            searchBoxMinLines: searchBoxMinLines,
-            findController: findController,
+          child: Container(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label ?? "", style: titleStyle),
+                SelectDialog<T>(
+                  selectedValue: selectedValue,
+                  multipleSelectedValues: multipleSelectedValues,
+                  itemsList: items,
+                  onChange: onChange,
+                  onMultipleItemsChange: onMultipleItemsChange,
+                  onFind: onFind,
+                  showSearchBox: showSearchBox,
+                  itemBuilder: itemBuilder,
+                  searchBoxDecoration: searchBoxDecoration,
+                  searchHint: searchHint,
+                  titleStyle: titleStyle,
+                  emptyBuilder: emptyBuilder,
+                  okButtonBuilder: okButtonBuilder,
+                  loadingBuilder: loadingBuilder,
+                  errorBuilder: errorBuilder,
+                  constraints: constraints,
+                  autofocus: autofocus,
+                  alwaysShowScrollBar: alwaysShowScrollBar,
+                  searchBoxMaxLines: searchBoxMaxLines,
+                  searchBoxMinLines: searchBoxMinLines,
+                  findController: findController,
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -185,68 +196,61 @@ class _SelectDialogState<T> extends State<SelectDialog<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: MediaQuery.of(context).size.width * 0.9,
-      height: MediaQuery.of(context).size.height * 0.7,
-      constraints: widget.constraints ?? (isWeb ? webDefaultConstraints : mobileDefaultConstraints),
-      child: Column(
-        children: <Widget>[
-          if (widget.showSearchBox)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: bloc.findController,
-                focusNode: bloc.focusNode,
-                maxLines: widget.searchBoxMaxLines,
-                minLines: widget.searchBoxMinLines,
-                decoration: widget.searchBoxDecoration?.copyWith(hintText: widget.searchHint ?? widget.searchBoxDecoration!.hintText) ?? InputDecoration(hintText: widget.searchHint ?? "Find", contentPadding: const EdgeInsets.all(2.0)),
-              ),
-            ),
-          Expanded(
-            child: StreamBuilder<List<T>?>(
-              stream: bloc.filteredListOut,
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return widget.errorBuilder?.call(context, snapshot.error) ?? Center(child: Text("Oops. \n${snapshot.error}"));
-                } else if (!snapshot.hasData) {
-                  return widget.loadingBuilder?.call(context) ?? Center(child: CircularProgressIndicator());
-                } else if (snapshot.data!.isEmpty) {
-                  return widget.emptyBuilder?.call(context) ?? Center(child: Text("No data found"));
-                }
-                return Scrollbar(
-                  controller: bloc.scrollController,
-                  isAlwaysShown: widget.alwaysShowScrollBar,
-                  child: ListView.builder(
-                    controller: bloc.scrollController,
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      var item = snapshot.data![index];
-                      bool isSelected = multipleItemsBloc.selectedItems.contains(item);
-                      isSelected = isSelected || item == widget.selectedValue;
-                      return InkWell(
-                        child: itemBuilder(context, item, isSelected),
-                        onTap: () {
-                          if (isMultipleItems) {
-                            setState(() => (isSelected) ? multipleItemsBloc.unselectItem(item) : multipleItemsBloc.selectItem(item));
-                          } else {
-                            onChange?.call(item);
-                            Navigator.pop(context);
-                          }
-                        },
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+    return Column(
+      children: <Widget>[
+        if (widget.showSearchBox)
+          TextField(
+            controller: bloc.findController,
+            focusNode: bloc.focusNode,
+            maxLines: widget.searchBoxMaxLines,
+            minLines: widget.searchBoxMinLines,
+            decoration: widget.searchBoxDecoration?.copyWith(hintText: widget.searchHint ?? widget.searchBoxDecoration!.hintText) ?? InputDecoration(hintText: widget.searchHint ?? "Find", contentPadding: const EdgeInsets.all(2.0)),
           ),
-          if (isMultipleItems)
-            okButtonBuilder(context, () {
-              multipleItemsBloc.onSelectButtonPressed();
-              Navigator.pop(context);
-            }),
-        ],
-      ),
+        SizedBox(height: 10),
+        StreamBuilder<List<T>?>(
+          stream: bloc.filteredListOut,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return widget.errorBuilder?.call(context, snapshot.error) ?? Center(child: Text("Oops. \n${snapshot.error}"));
+            } else if (!snapshot.hasData) {
+              return widget.loadingBuilder?.call(context) ?? Center(child: CircularProgressIndicator());
+            } else if (snapshot.data!.isEmpty) {
+              return widget.emptyBuilder?.call(context) ?? Center(child: Text("No data found"));
+            }
+            return Scrollbar(
+              controller: bloc.scrollController,
+              isAlwaysShown: widget.alwaysShowScrollBar,
+              child: ListView.separated(
+                separatorBuilder: (context, index)=>Divider(thickness: 1),
+                shrinkWrap: true,
+                controller: bloc.scrollController,
+                itemCount: snapshot.data!.length,
+                itemBuilder: (context, index) {
+                  var item = snapshot.data![index];
+                  bool isSelected = multipleItemsBloc.selectedItems.contains(item);
+                  isSelected = isSelected || item == widget.selectedValue;
+                  return InkWell(
+                    child: itemBuilder(context, item, isSelected),
+                    onTap: () {
+                      if (isMultipleItems) {
+                        setState(() => (isSelected) ? multipleItemsBloc.unselectItem(item) : multipleItemsBloc.selectItem(item));
+                      } else {
+                        onChange?.call(item);
+                        Navigator.pop(context);
+                      }
+                    },
+                  );
+                },
+              ),
+            );
+          },
+        ),
+        if (isMultipleItems)
+          okButtonBuilder(context, () {
+            multipleItemsBloc.onSelectButtonPressed();
+            Navigator.pop(context);
+          }),
+      ],
     );
   }
 }
